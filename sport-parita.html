@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sport e Parità - Apprendimento Interattivo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .video-wrapper {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 ratio */
+            height: 0;
+            overflow: hidden;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+        .video-wrapper iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .video-bubble {
+            position: absolute;
+            left: 12px;
+            right: 12px;
+            top: 12px;
+            z-index: 20;
+            pointer-events: none;
+            background: rgba(15, 23, 42, 0.88); /* slate-900 */
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(148, 163, 184, 0.45); /* slate-400 */
+            color: #e2e8f0; /* slate-200 */
+            border-radius: 16px;
+            padding: 10px 12px;
+            box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22);
+            white-space: pre-line;
+        }
+        @media (min-width: 640px) {
+            .video-bubble {
+                right: auto;
+                max-width: 560px;
+            }
+        }
+
+        /* Info-bulle / Tooltip (hover + focus) */
+        .tooltip {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+        .tooltip-btn {
+            width: 22px;
+            height: 22px;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 900;
+            line-height: 1;
+            color: #1d4ed8; /* indigo-ish */
+            background: #e8f0fe;
+            border: 1px solid #d2e3fc;
+            cursor: help;
+            user-select: none;
+        }
+        .tooltip-content {
+            position: absolute;
+            left: 50%;
+            bottom: calc(100% + 8px);
+            transform: translateX(-50%) translateY(6px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s ease, transform 0.15s ease;
+            width: 280px;
+            max-width: 85vw;
+            background: #0f172a; /* slate-900 */
+            color: #e2e8f0; /* slate-200 */
+            padding: 10px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
+            z-index: 50;
+        }
+        .tooltip-content::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 7px 7px 0 7px;
+            border-style: solid;
+            border-color: #0f172a transparent transparent transparent;
+        }
+        .tooltip:focus-within .tooltip-content,
+        .tooltip:hover .tooltip-content {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 font-sans">
+
+    <div class="max-w-7xl mx-auto px-4 py-6 md:py-10">
+        <!-- Header -->
+        <header class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 pb-6">
+            <div>
+                <nav class="text-sm text-indigo-600 font-bold mb-2 tracking-wide uppercase">Percorso Multimodale B1/B2</nav>
+                <h1 class="text-4xl font-black text-slate-900 tracking-tight">Le donne e lo sport italiano</h1>
+                <p class="text-slate-500 mt-2 text-lg">Analisi critica e storica della parità di genere nell'agonismo.</p>
+            </div>
+            <div class="flex items-center gap-3 bg-white shadow-sm border border-slate-200 px-6 py-3 rounded-2xl">
+                <div class="bg-indigo-100 p-2 rounded-lg text-indigo-600">
+                    <i class="fas fa-trophy"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-400 font-bold uppercase">Punteggio</div>
+                    <div id="scoreDisplay" class="text-xl font-black text-slate-900">0</div>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- Area Video e Risorse (8 col) -->
+            <div class="lg:col-span-7 xl:col-span-8 space-y-8">
+                
+                <!-- Player Video -->
+                <section class="space-y-4 lg:sticky lg:top-6">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-xl font-bold flex items-center gap-2">
+                            <span class="bg-indigo-600 text-white w-8 h-8 rounded-lg flex items-center justify-center text-sm">1</span>
+                            Guarda il video della Rai
+                        </h2>
+                        <span class="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">DURATA: 01:53</span>
+                    </div>
+                    
+                    <div class="video-wrapper bg-black">
+                        <!-- Video YouTube integrato. Nota: funziona correttamente se la pagina e' servita via HTTP/HTTPS (localhost, GitHub Pages...). -->
+                        <iframe
+                            id="video-player"
+                            loading="lazy"
+                            referrerpolicy="strict-origin-when-cross-origin"
+                            src="https://www.youtube.com/embed/0FvCaouS4l4?rel=0&modestbranding=1&enablejsapi=1"
+                            title="Le donne nello sport italiano"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowfullscreen>
+                        </iframe>
+                        <!-- Info-bulle "dans la vidéo" (si attiva durante una tappa) -->
+                        <div id="videoBubble" class="video-bubble hidden">
+                            <span id="videoBubbleText"></span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Glossario Dinamico -->
+                <section class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                    <h3 class="text-lg font-bold mb-5 flex items-center gap-2 text-slate-700">
+                        <i class="fas fa-book-open text-indigo-500"></i> Lessico fondamentale
+                    </h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        <div class="group p-4 bg-slate-50 rounded-2xl hover:bg-indigo-50 transition-colors border border-transparent hover:border-indigo-100">
+                            <div class="font-bold text-indigo-900 mb-1">Agonismo</div>
+                            <div class="text-xs text-slate-500 italic">Compétition sportive de haut niveau.</div>
+                        </div>
+                        <div class="group p-4 bg-slate-50 rounded-2xl hover:bg-indigo-50 transition-colors border border-transparent hover:border-indigo-100">
+                            <div class="font-bold text-indigo-900 mb-1">Parità</div>
+                            <div class="text-xs text-slate-500 italic">Égalité des droits et des chances.</div>
+                        </div>
+                        <div class="group p-4 bg-slate-50 rounded-2xl hover:bg-indigo-50 transition-colors border border-transparent hover:border-indigo-100">
+                            <div class="font-bold text-indigo-900 mb-1">Dilettanti</div>
+                            <div class="text-xs text-slate-500 italic">Amateurs (statut sans contrat pro).</div>
+                        </div>
+                        <div class="group p-4 bg-slate-50 rounded-2xl hover:bg-indigo-50 transition-colors border border-transparent hover:border-indigo-100">
+                            <div class="font-bold text-indigo-900 mb-1">Tutele</div>
+                            <div class="text-xs text-slate-500 italic">Garanties de protection sociale.</div>
+                        </div>
+                        <div class="group p-4 bg-slate-50 rounded-2xl hover:bg-indigo-50 transition-colors border border-transparent hover:border-indigo-100">
+                            <div class="font-bold text-indigo-900 mb-1">Sradicare</div>
+                            <div class="text-xs text-slate-500 italic">Déraciner / Supprimer totalement.</div>
+                        </div>
+                        <div class="group p-4 bg-slate-50 rounded-2xl hover:bg-indigo-50 transition-colors border border-transparent hover:border-indigo-100">
+                            <div class="font-bold text-indigo-900 mb-1">Impegno</div>
+                            <div class="text-xs text-slate-500 italic">L'engagement / L'effort soutenu.</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Attività e Quiz (4 col) -->
+            <div class="lg:col-span-5 xl:col-span-4 space-y-8">
+                
+                <!-- Rappresentazioni mentali (prima della visione) -->
+                <section class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                    <h3 class="text-lg font-bold mb-2 flex items-center gap-2">
+                        <i class="fas fa-lightbulb text-amber-500"></i> Prima del video: 3 idee da verificare
+                    </h3>
+                    <p class="text-sm text-slate-500 mb-5">Scegli <strong>Vero</strong> o <strong>Falso</strong>. Poi leggi la spiegazione (serve per “resettare” gli stereotipi).</p>
+
+                    <div class="space-y-4">
+                        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                            <div class="flex items-start justify-between gap-3">
+                                <p class="text-sm font-bold text-slate-800">1) “Dilettante = senza talento.”</p>
+                                <span class="tooltip">
+                                    <button type="button" class="tooltip-btn" aria-label="Info">i</button>
+                                    <span class="tooltip-content" role="tooltip">Attenzione: “dilettante” (qui) parla di contratto e tutele, non di bravura.</span>
+                                </span>
+                            </div>
+                            <div class="mt-3 flex gap-2">
+                                <button type="button" class="flex-1 py-2 rounded-xl border border-slate-200 bg-white hover:border-indigo-400 hover:shadow-sm transition font-bold text-sm" onclick="answerBelief('belief1', true)">Vero</button>
+                                <button type="button" class="flex-1 py-2 rounded-xl border border-slate-200 bg-white hover:border-indigo-400 hover:shadow-sm transition font-bold text-sm" onclick="answerBelief('belief1', false)">Falso</button>
+                            </div>
+                            <div id="belief1" class="hidden mt-3 text-sm p-3 rounded-xl border"></div>
+                        </div>
+
+                        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                            <div class="flex items-start justify-between gap-3">
+                                <p class="text-sm font-bold text-slate-800">2) “Parità = stesse opportunità e tutele.”</p>
+                                <span class="tooltip">
+                                    <button type="button" class="tooltip-btn" aria-label="Info">i</button>
+                                    <span class="tooltip-content" role="tooltip">Parità non vuol dire “tutti uguali”: vuol dire diritti, protezioni e possibilità comparabili.</span>
+                                </span>
+                            </div>
+                            <div class="mt-3 flex gap-2">
+                                <button type="button" class="flex-1 py-2 rounded-xl border border-slate-200 bg-white hover:border-indigo-400 hover:shadow-sm transition font-bold text-sm" onclick="answerBelief('belief2', true)">Vero</button>
+                                <button type="button" class="flex-1 py-2 rounded-xl border border-slate-200 bg-white hover:border-indigo-400 hover:shadow-sm transition font-bold text-sm" onclick="answerBelief('belief2', false)">Falso</button>
+                            </div>
+                            <div id="belief2" class="hidden mt-3 text-sm p-3 rounded-xl border"></div>
+                        </div>
+
+                        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                            <div class="flex items-start justify-between gap-3">
+                                <p class="text-sm font-bold text-slate-800">3) “Se una donna vince, allora la parità è già raggiunta.”</p>
+                                <span class="tooltip">
+                                    <button type="button" class="tooltip-btn" aria-label="Info">i</button>
+                                    <span class="tooltip-content" role="tooltip">Un successo individuale non cancella automaticamente differenze di contratti, visibilità, tutele e risorse.</span>
+                                </span>
+                            </div>
+                            <div class="mt-3 flex gap-2">
+                                <button type="button" class="flex-1 py-2 rounded-xl border border-slate-200 bg-white hover:border-indigo-400 hover:shadow-sm transition font-bold text-sm" onclick="answerBelief('belief3', true)">Vero</button>
+                                <button type="button" class="flex-1 py-2 rounded-xl border border-slate-200 bg-white hover:border-indigo-400 hover:shadow-sm transition font-bold text-sm" onclick="answerBelief('belief3', false)">Falso</button>
+                            </div>
+                            <div id="belief3" class="hidden mt-3 text-sm p-3 rounded-xl border"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Visione guidata a tappe (attività a destra) -->
+                <section class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-bold flex items-center gap-2 text-slate-700">
+                            <i class="fas fa-clapperboard text-indigo-500"></i> Guarda a tappe
+                            <span class="tooltip">
+                                <button type="button" class="tooltip-btn" aria-label="Info">i</button>
+                                <span class="tooltip-content" role="tooltip">Clicca una tappa: il video parte da quel punto e si ferma alla fine del segmento. Poi fai la pausa guidata con domande e aiuti.</span>
+                            </span>
+                        </h3>
+                        <span id="chaptersCount" class="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">—</span>
+                    </div>
+                    <p class="text-sm text-slate-500 mt-2">Obiettivo: <strong>guardare piccoli pezzi</strong> + <strong>pausare</strong> + <strong>rispondere</strong>.</p>
+
+                    <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <button type="button" class="px-4 py-3 rounded-2xl bg-slate-900 text-white font-black text-sm hover:bg-black transition" onclick="startGuided()">
+                            Inizia (prima tappa)
+                        </button>
+                        <button type="button" class="px-4 py-3 rounded-2xl bg-slate-100 text-slate-800 font-black text-sm hover:bg-slate-200 transition" onclick="pauseNow()">
+                            Pausa + domande
+                        </button>
+                    </div>
+
+                    <div id="statusLine" class="mt-3 text-xs text-slate-500"></div>
+
+                    <!-- Commenti "incrustati" nella video (a richiesta) -->
+                    <div class="mt-4 p-4 bg-white rounded-2xl border border-slate-200">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <div class="text-sm font-black text-slate-900 flex items-center gap-2">
+                                    Commenti nella video (a richiesta)
+                                    <span class="tooltip">
+                                        <button type="button" class="tooltip-btn" aria-label="Info">i</button>
+                                        <span class="tooltip-content" role="tooltip">Quando sei in difficoltà, clicca una parola: appare un commento sopra il video. Scegli la lingua (IT/FR). Non è automatico: lo chiedi tu.</span>
+                                    </span>
+                                </div>
+                                <p class="text-xs text-slate-500 mt-1">Suggerimento: usa i commenti solo quando serve (meno distrazioni).</p>
+                            </div>
+                            <div class="shrink-0 flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-2xl p-1">
+                                <button type="button" id="langBtnIt" class="px-2.5 py-1.5 rounded-xl text-xs font-black hover:bg-white transition" onclick="setVideoNotesLang('it')">IT</button>
+                                <button type="button" id="langBtnFr" class="px-2.5 py-1.5 rounded-xl text-xs font-black hover:bg-white transition" onclick="setVideoNotesLang('fr')">FR</button>
+                                <button type="button" id="langBtnBoth" class="px-2.5 py-1.5 rounded-xl text-xs font-black hover:bg-white transition" onclick="setVideoNotesLang('both')">IT+FR</button>
+                            </div>
+                        </div>
+
+                        <div id="videoNotesHint" class="mt-3 text-xs text-slate-500">Seleziona una tappa per vedere i commenti disponibili.</div>
+                        <div id="videoNotesList" class="mt-3 flex flex-wrap gap-2"></div>
+
+                        <div class="mt-3 flex flex-col sm:flex-row gap-2">
+                            <button type="button" class="flex-1 px-4 py-3 rounded-2xl bg-slate-100 text-slate-800 hover:bg-slate-200 transition font-black text-sm" onclick="hideVideoNote()">Nascondi commento</button>
+                            <button type="button" class="flex-1 px-4 py-3 rounded-2xl bg-slate-900 text-white hover:bg-black transition font-black text-sm" onclick="resumeVideo()">Riprendi video</button>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
+                        <div class="text-xs text-indigo-700 font-black uppercase tracking-wide mb-1">Stop & pensa</div>
+                        <p id="chapterPrompt" class="text-sm text-indigo-900">Clicca una tappa per vedere la domanda guida.</p>
+                    </div>
+
+                    <div id="chaptersList" class="space-y-3 mt-4"></div>
+
+                    <!-- Pausa guidata (compare a fine tappa o con "Pausa + domande") -->
+                    <div id="pausePanel" class="hidden mt-5 p-5 bg-white rounded-3xl border border-slate-200 shadow-sm">
+                        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                            <div>
+                                <div class="text-xs text-amber-700 font-black uppercase tracking-wide mb-1">Pausa guidata</div>
+                                <div id="pauseTitle" class="text-lg font-black text-slate-900">—</div>
+                                <div id="pauseTime" class="text-xs text-slate-500 mt-0.5">—</div>
+                                <div id="pauseProgress" class="text-xs text-slate-500 mt-1">—</div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button type="button" class="px-3 py-2 rounded-xl bg-slate-100 text-slate-800 font-bold text-sm hover:bg-slate-200 transition" onclick="replayCurrentChapter()">Riascolta tappa</button>
+                                <button id="pausePrimaryBtn" type="button" class="px-3 py-2 rounded-xl bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" onclick="pausePrimaryAction()" disabled>—</button>
+                            </div>
+                        </div>
+
+                        <div id="pauseTranscriptWrap" class="mt-4 hidden">
+                            <div class="text-xs font-black uppercase tracking-wide text-slate-500 mb-2">Estratto (trascrizione)</div>
+                            <div id="pauseTranscript" class="whitespace-pre-wrap text-sm text-slate-700 leading-relaxed p-4 bg-slate-50 border border-slate-200 rounded-2xl"></div>
+                        </div>
+
+                        <div class="mt-4">
+                            <div class="text-xs font-black uppercase tracking-wide text-slate-500 mb-2">Domande</div>
+                            <div id="pauseQuestions" class="space-y-2 text-sm text-slate-700"></div>
+                        </div>
+
+                        <div id="pauseSupports" class="mt-4 space-y-2"></div>
+                    </div>
+
+                    <div class="mt-5 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                        <div class="text-xs font-black uppercase tracking-wide text-slate-500 mb-1">Le tue risposte</div>
+                        <p class="text-xs text-slate-600 leading-relaxed">Le risposte si salvano automaticamente su questo dispositivo. Alla fine, puoi copiarle o scaricarle.</p>
+                        <div class="mt-3 flex flex-col sm:flex-row gap-2">
+                            <button type="button" class="flex-1 px-4 py-3 rounded-2xl bg-white border border-slate-200 hover:border-indigo-400 hover:shadow-sm transition font-black text-sm" onclick="copyAllAnswers()">Copia tutte le risposte</button>
+                            <button type="button" class="flex-1 px-4 py-3 rounded-2xl bg-slate-900 text-white hover:bg-black transition font-black text-sm" onclick="downloadAllAnswers()">Scarica (.txt)</button>
+                        </div>
+                        <div id="exportStatus" class="mt-2 text-xs text-slate-500"></div>
+                    </div>
+                </section>
+
+                <!-- Quiz Progress -->
+                <section class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-tasks text-emerald-500"></i> Verifica Comprensione
+                    </h3>
+                    <div id="quizArea" class="space-y-4">
+                        <div class="p-4 bg-slate-50 rounded-2xl">
+                            <p class="text-sm text-slate-600 mb-4" id="quizQuestion">Sei pronto a testare le tue conoscenze sul video?</p>
+                            <button onclick="startQuiz()" id="startBtn" class="w-full py-3 bg-slate-900 text-white rounded-xl hover:bg-black transition font-bold text-sm">
+                                Comincia il Quiz
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Risultati -->
+    <div id="modal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white p-8 rounded-[2rem] max-w-md w-full text-center shadow-2xl border border-slate-100">
+            <div id="modalIcon" class="text-6xl mb-6"></div>
+            <h2 id="modalTitle" class="text-2xl font-black mb-3 text-slate-900"></h2>
+            <p id="modalText" class="text-slate-600 mb-8 leading-relaxed"></p>
+            <button onclick="closeModal()" class="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all">Continua</button>
+        </div>
+    </div>
+
+    <script>
+        let score = 0;
+        let currentQuizIndex = 0;
+
+        /* -------------------------------
+           1) Rappresentazioni (Vero/Falso)
+        --------------------------------- */
+        const beliefs = {
+            belief1: {
+                correct: false,
+                ok: "“Dilettante” non vuol dire “scarso”. Qui significa: non professionista, spesso senza contratto e senza tutele.",
+                ko: "In realtà “dilettante” non parla di talento, ma di status (contratti e tutele)."
+            },
+            belief2: {
+                correct: true,
+                ok: "Esatto: la parità riguarda opportunità e tutele (diritti, protezioni, risorse).",
+                ko: "Rileggi: la parità riguarda diritti e opportunità (tutele, risorse, visibilità), non “tutti identici”."
+            },
+            belief3: {
+                correct: false,
+                ok: "Giusto: un successo individuale non garantisce automaticamente parità di contratti, visibilità e tutele.",
+                ko: "Attenzione: vincere è importante, ma non basta da solo per garantire parità di diritti e opportunità."
+            }
+        };
+
+        function answerBelief(id, chosen) {
+            const el = document.getElementById(id);
+            const item = beliefs[id];
+            if (!el || !item) return;
+
+            const isCorrect = chosen === item.correct;
+            el.classList.remove('hidden');
+
+            if (isCorrect) {
+                el.style.backgroundColor = '#e6f4ea';
+                el.style.borderColor = '#ceead6';
+                el.style.color = '#0d652d';
+                el.innerHTML = "<strong>Corretto.</strong> " + item.ok;
+                return;
+            }
+
+            el.style.backgroundColor = '#fef7e0';
+            el.style.borderColor = '#fde293';
+            el.style.color = '#7a4a00';
+            el.innerHTML = "<strong>Non proprio.</strong> " + item.ko;
+        }
+
+        /* -------------------------------
+           2) Sequenza video (capitoli)
+        --------------------------------- */
+        let player = null;
+        let chapterStopTimer = null;
+        let currentChapter = null;
+        let pauseMode = "end"; // "end" | "manual"
+        let videoNotesLang = "it"; // "it" | "fr" | "both"
+        let lastVideoNote = null;
+        let videoBubbleItems = [];
+        let videoBubbleShown = [];
+        let videoBubbleVisibleIndex = null;
+        const ANSWERS_STORAGE_KEY = "sport_parita_answers_v1";
+        let answersState = loadAnswersState();
+
+        // Nota: i tempi qui sotto sono indicativi. Se serve, modifica start/end direttamente nel codice.
+        const defaultChapters = [
+            {
+                id: "intro",
+                icon: "fa-flag-checkered",
+                title: "Introduzione",
+                summary: "Lo sport è forza, intelligenza, talento.",
+                start: 0,
+                end: 10,
+                prompt: "Qual è la prima parola che associ a “sport femminile”? Perché?",
+                bubble: "Attenzione: “meno visibile” non vuol dire “meno importante”. A volte il problema è la visibilità, non il talento."
+            },
+            {
+                id: "alfonsina",
+                icon: "fa-bicycle",
+                title: "Alfonsina Strada (1924)",
+                summary: "Prima donna al Giro d'Italia di ciclismo.",
+                start: 10,
+                end: 35,
+                prompt: "Quale “muro” ha abbattuto? Che cosa significa essere una pioniera?",
+                bubble: "Non è “solo una storia”: mostra che certe porte erano chiuse per motivi sociali, non sportivi."
+            },
+            {
+                id: "campionesse",
+                icon: "fa-medal",
+                title: "Campionesse italiane",
+                summary: "Compagnoni, Cagnotto, Pellegrini: esempi di eccellenza.",
+                start: 35,
+                end: 55,
+                prompt: "Quale impresa ti colpisce di più? Spiega con una frase.",
+                bubble: "Idea chiave: il talento può esserci anche quando le risorse e la visibilità non sono le stesse."
+            },
+            {
+                id: "legge1981",
+                icon: "fa-scale-balanced",
+                title: "Legge 1981: “dilettanti”",
+                summary: "Per anni: successi sì, tutele no.",
+                start: 55,
+                end: 75,
+                prompt: "Che cosa sono le “tutele”? Fai 2 esempi.",
+                bubble: "“Dilettante” ≠ “poco bravo”: spesso significa senza contratto, senza protezioni, senza riconoscimento."
+            },
+            {
+                id: "maternita",
+                icon: "fa-hand-holding-heart",
+                title: "Fondo maternità",
+                summary: "Una vittoria “epocale” per i diritti.",
+                start: 75,
+                end: 92,
+                prompt: "Perché una tutela cambia la vita di un'atleta? (1 frase).",
+                bubble: "Parità = anche protezioni: maternità, infortuni, pensione, sicurezza economica."
+            },
+            {
+                id: "limiti",
+                icon: "fa-bolt",
+                title: "Femminilità & limiti",
+                summary: "Un'idea di femminilità diversa e la forza di cambiare abitudini.",
+                start: 92,
+                end: 109,
+                prompt: "Cosa significa: “gli unici limiti insuperabili sono quelli che abbiamo dentro di noi”?",
+                bubble: "Parole chiave: scolpiti, patinata, sradicare, consuetudini, limiti insuperabili.",
+                pause: {
+                    transcript:
+`… con i loro muscoli, i fisici scolpiti, affermano un'idea di femminilità finalmente diversa
+da quella patinata delle copertine dei giornali…
+Ci danno la forza di sradicare consuetudini sbagliate e ricordano che gli unici limiti
+insuperabili sono quelli che ancora abbiamo dentro di noi: per il resto niente ci può fermare.`,
+                    questions: [
+                        {
+                            id: "q1",
+                            text: "1) Comprensione: che tipo di “femminilità” viene descritta? (2 parole)",
+                            minWords: 2,
+                            keywordsAny: ["forte", "muscoli", "scolpiti", "diversa", "patinata", "copertina"],
+                            placeholder: "Esempio: “forte, reale” / “non patinata” / “muscoli scolpiti”…"
+                        },
+                        {
+                            id: "q2",
+                            text: "2) Interpretazione: che cosa vuol dire “i limiti sono dentro di noi”?",
+                            minChars: 25,
+                            keywordsAny: ["paura", "idea", "testa", "dentro", "convincimento", "pensare"],
+                            placeholder: "Secondo me significa che…"
+                        },
+                        {
+                            id: "q3",
+                            text: "3) Collegamento: un esempio (scuola, sport o vita) in cui un limite era “nella testa”.",
+                            minChars: 25,
+                            keywordsAny: ["esempio", "quando", "prima", "poi", "riuscito", "capito"],
+                            placeholder: "Un esempio è quando…"
+                        }
+                    ],
+                    supports: [
+                        {
+                            title: "Aiuto 1 — Riformulazione facile (IT)",
+                            body: "Le atlete mostrano un modo diverso di essere donne: non solo “perfette” da copertina, ma forti. Questo ci aiuta a cambiare abitudini sbagliate e ci ricorda che il limite più grande, spesso, è la paura o l'idea che “non ce la posso fare”."
+                        },
+                        {
+                            title: "Aiuto 2 — Parole chiave (IT → FR)",
+                            body: "• scolpiti = bien dessinés / très définis\n• patinata = lisse, “glamour”, da copertina\n• sradicare = déraciner / enlever complètement\n• consuetudini = habitudes\n• limiti insuperabili = limites impossibles à dépasser\n• dentro di noi = en nous / dans notre tête"
+                        },
+                        {
+                            title: "Aiuto 3 — Frasi utili per rispondere",
+                            body: "Secondo me, questa frase significa che…\nUn esempio è quando…\nPenso che il limite fosse… perché…"
+                        }
+                    ]
+                },
+                videoBubbles: [
+                    { id: "scolpiti", label: "scolpiti", at: 92, duration: 4, it: "muscoli ben definiti", fr: "muscles bien dessinés / très définis" },
+                    { id: "patinata", label: "patinata", at: 96, duration: 5, it: "troppo perfetta, “da copertina”", fr: "trop lisse, “glamour”, comme une couverture de magazine" },
+                    { id: "sradicare", label: "sradicare", at: 100, duration: 6, it: "eliminare completamente (abitudini sbagliate)", fr: "déraciner / enlever complètement (des habitudes)" },
+                    { id: "limiti", label: "limiti insuperabili", at: 104, duration: 6, it: "limiti che sembrano impossibili da superare", fr: "limites qui semblent impossibles à dépasser" }
+                ]
+            }
+        ];
+
+        let chapters = defaultChapters.map(c => ({ ...c }));
+
+        /* -------------------------------
+           Stato risposte (salvataggio locale)
+        --------------------------------- */
+        function loadAnswersState() {
+            try {
+                const raw = localStorage.getItem(ANSWERS_STORAGE_KEY);
+                if (!raw) return { answers: {} };
+                const parsed = JSON.parse(raw);
+                if (!parsed || typeof parsed !== "object") return { answers: {} };
+                if (!parsed.answers || typeof parsed.answers !== "object") parsed.answers = {};
+                return parsed;
+            } catch (_) {
+                return { answers: {} };
+            }
+        }
+
+        function persistAnswersState() {
+            try {
+                localStorage.setItem(ANSWERS_STORAGE_KEY, JSON.stringify(answersState));
+            } catch (_) {}
+        }
+
+        function getAnswer(chapterId, questionId) {
+            return String(answersState?.answers?.[chapterId]?.[questionId] || "");
+        }
+
+        function setAnswer(chapterId, questionId, text) {
+            if (!answersState.answers || typeof answersState.answers !== "object") answersState.answers = {};
+            if (!answersState.answers[chapterId]) answersState.answers[chapterId] = {};
+            answersState.answers[chapterId][questionId] = String(text || "");
+            answersState.updatedAt = Date.now();
+            persistAnswersState();
+        }
+
+        function setVideoNotesLang(lang) {
+            videoNotesLang = (lang === "fr" || lang === "both") ? lang : "it";
+            updateVideoNotesLangButtons();
+            renderVideoNotesForChapter(currentChapter);
+            if (lastVideoNote) showVideoNote(lastVideoNote, { pause: false });
+        }
+
+        function updateVideoNotesLangButtons() {
+            const it = document.getElementById("langBtnIt");
+            const fr = document.getElementById("langBtnFr");
+            const both = document.getElementById("langBtnBoth");
+            if (!it || !fr || !both) return;
+
+            const all = [it, fr, both];
+            all.forEach(b => {
+                b.style.backgroundColor = "transparent";
+                b.style.color = "#0f172a";
+            });
+
+            const selected = videoNotesLang === "fr" ? fr : (videoNotesLang === "both" ? both : it);
+            selected.style.backgroundColor = "#0f172a";
+            selected.style.color = "#ffffff";
+        }
+
+        function formatVideoNoteText(note) {
+            const label = note?.label ? String(note.label) : "Nota";
+            const it = note?.it ? String(note.it) : "";
+            const fr = note?.fr ? String(note.fr) : "";
+
+            if (videoNotesLang === "both") {
+                const lines = [];
+                lines.push(`${label}`);
+                if (it) lines.push(`IT: ${it}`);
+                if (fr) lines.push(`FR: ${fr}`);
+                return lines.join("\n");
+            }
+            if (videoNotesLang === "fr") return fr ? `FR: ${fr}` : (it ? `IT: ${it}` : label);
+            return it ? `IT: ${it}` : (fr ? `FR: ${fr}` : label);
+        }
+
+        function renderVideoNotesForChapter(ch) {
+            const hint = document.getElementById("videoNotesHint");
+            const list = document.getElementById("videoNotesList");
+            if (!hint || !list) return;
+
+            list.innerHTML = "";
+
+            if (!ch) {
+                hint.textContent = "Seleziona una tappa per vedere i commenti disponibili.";
+                return;
+            }
+
+            const items = Array.isArray(ch.videoBubbles) ? ch.videoBubbles : [];
+            if (!items.length) {
+                hint.textContent = "Per questa tappa non ci sono commenti. Se serve, usa il glossario (Lessico fondamentale).";
+                return;
+            }
+
+            hint.textContent = "Clicca una parola per mostrare il commento sopra il video.";
+
+            items.forEach(note => {
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "px-3 py-2 rounded-2xl bg-white border border-slate-200 hover:border-indigo-400 hover:shadow-sm transition text-xs font-black text-slate-800";
+
+                const label = note?.label ? String(note.label) : "Nota";
+                const t = (typeof note?.at === "number") ? formatTime(note.at) : "";
+                btn.textContent = t ? `${label} · ${t}` : label;
+
+                btn.addEventListener("click", () => showVideoNote(note, { pause: true }));
+                list.appendChild(btn);
+            });
+        }
+
+        function showVideoNote(note, opts) {
+            if (!note) return;
+            const pause = opts && opts.pause === false ? false : true;
+
+            lastVideoNote = note;
+            if (pause && player && player.pauseVideo) player.pauseVideo();
+            showVideoBubble(formatVideoNoteText(note));
+        }
+
+        function hideVideoNote() {
+            lastVideoNote = null;
+            clearVideoBubble();
+        }
+
+        function resumeVideo() {
+            clearVideoBubble();
+            if (player && player.playVideo) player.playVideo();
+        }
+
+        function normalizeQuestions(ch) {
+            const raw = Array.isArray(ch?.pause?.questions) ? ch.pause.questions : [ch?.prompt].filter(Boolean);
+            return raw.map((q, idx) => {
+                if (typeof q === "string") {
+                    return { id: `q${idx + 1}`, text: q, required: true };
+                }
+
+                const id = q?.id || `q${idx + 1}`;
+                return {
+                    id,
+                    text: String(q?.text || ""),
+                    required: q?.required !== false,
+                    minChars: (typeof q?.minChars === "number") ? q.minChars : undefined,
+                    minWords: (typeof q?.minWords === "number") ? q.minWords : undefined,
+                    placeholder: q?.placeholder ? String(q.placeholder) : undefined,
+                    keywordsAny: Array.isArray(q?.keywordsAny) ? q.keywordsAny.map(String) : undefined
+                };
+            });
+        }
+
+        function countWords(text) {
+            return String(text || "").trim().split(/\s+/).filter(Boolean).length;
+        }
+
+        function detectMinWordsFromPrompt(promptText) {
+            const t = String(promptText || "");
+            const m = t.match(/(\d+)\s*parole/i);
+            if (!m) return null;
+            const n = Number.parseInt(m[1], 10);
+            return Number.isFinite(n) ? Math.max(1, n) : null;
+        }
+
+        function validateAnswer(ch, q, value) {
+            if (!q || q.required === false) return { complete: true, message: "" };
+
+            const text = String(value || "").trim();
+            if (!text) return { complete: false, message: "Scrivi una risposta (anche breve)." };
+
+            const minWordsAuto = detectMinWordsFromPrompt(q.text);
+            const minWords = (typeof q.minWords === "number") ? q.minWords : minWordsAuto;
+
+            // Default: breve, ma non “vuoto”.
+            let minChars = (typeof q.minChars === "number") ? q.minChars : 12;
+
+            // Se l'istruzione dice “1 frase”, chiediamo un po' più di sviluppo.
+            if (/(\d+)\s*frase/i.test(q.text) || /una\s+frase/i.test(q.text)) {
+                minChars = Math.max(minChars, 25);
+            }
+
+            if (minWords) {
+                const w = countWords(text);
+                if (w < minWords) return { complete: false, message: `Obiettivo: almeno ${minWords} parole.` };
+            } else if (text.length < minChars) {
+                return { complete: false, message: `Obiettivo: almeno ${minChars} caratteri.` };
+            }
+
+            // Suggerimento (non bloccante): usare parole chiave.
+            if (Array.isArray(q.keywordsAny) && q.keywordsAny.length) {
+                const lower = text.toLowerCase();
+                const ok = q.keywordsAny.some(k => lower.includes(String(k).toLowerCase()));
+                if (!ok) {
+                    return {
+                        complete: true,
+                        message: "Suggerimento: prova a usare una parola chiave del video (es. limiti, patinata, sradicare…).",
+                        hint: true
+                    };
+                }
+            }
+
+            return { complete: true, message: "OK." };
+        }
+
+        function isChapterComplete(ch) {
+            if (!ch || !ch.id) return false;
+            const qs = normalizeQuestions(ch).filter(q => q.required !== false);
+            if (!qs.length) return true;
+            return qs.every(q => validateAnswer(ch, q, getAnswer(ch.id, q.id)).complete);
+        }
+
+        function exportAnswersText() {
+            const lines = [];
+            lines.push("Le donne e lo sport italiano — Risposte");
+            try { lines.push(new Date().toLocaleString()); } catch (_) {}
+            lines.push("");
+
+            chapters.forEach((ch, idx) => {
+                const range = (ch.start != null && ch.end != null)
+                    ? `${formatTime(ch.start)}–${formatTime(ch.end)}`
+                    : `${formatTime(ch.start || 0)}`;
+
+                lines.push(`${idx + 1}. ${ch.title} (${range})`);
+                const qs = normalizeQuestions(ch);
+                qs.forEach(q => {
+                    lines.push(`- ${q.text}`);
+                    const a = getAnswer(ch.id, q.id).trim();
+                    lines.push(a ? `  ${a}` : "  [nessuna risposta]");
+                });
+                lines.push("");
+            });
+
+            return lines.join("\n");
+        }
+
+        function setExportStatus(text) {
+            const el = document.getElementById("exportStatus");
+            if (!el) return;
+            el.textContent = text || "";
+        }
+
+        function fallbackCopy(text) {
+            const ta = document.createElement("textarea");
+            ta.value = text;
+            ta.style.position = "fixed";
+            ta.style.left = "-9999px";
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand("copy"); } catch (_) {}
+            document.body.removeChild(ta);
+        }
+
+        function copyAllAnswers() {
+            const text = exportAnswersText();
+            const done = () => setExportStatus("Copiato negli appunti.");
+
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(done).catch(() => {
+                    fallbackCopy(text);
+                    done();
+                });
+                return;
+            }
+
+            fallbackCopy(text);
+            done();
+        }
+
+        function downloadAllAnswers() {
+            const text = exportAnswersText();
+            try {
+                const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "risposte-sport-parita.txt";
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                    URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                }, 0);
+                setExportStatus("Download avviato.");
+            } catch (_) {
+                setExportStatus("Download non disponibile su questo browser.");
+            }
+        }
+
+        function formatTime(totalSeconds) {
+            const s = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+            const m = Math.floor(s / 60);
+            const r = s % 60;
+            return String(m) + ":" + String(r).padStart(2, "0");
+        }
+
+        function renderChapters() {
+            const list = document.getElementById("chaptersList");
+            const countEl = document.getElementById("chaptersCount");
+            if (!list) return;
+            const doneCount = chapters.filter(isChapterComplete).length;
+            if (countEl) countEl.textContent = `${doneCount}/${chapters.length} TAPPE`;
+
+            list.innerHTML = chapters.map(ch => {
+                const range = ch.end != null ? `${formatTime(ch.start)}–${formatTime(ch.end)}` : `${formatTime(ch.start)}`;
+                const isCurrent = Boolean(currentChapter && currentChapter.id === ch.id);
+                const isDone = isChapterComplete(ch);
+                const badge = isDone
+                    ? `<span class="text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg"><i class="fas fa-check mr-1"></i>Fatto</span>`
+                    : (isCurrent
+                        ? `<span class="text-[10px] font-black text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-1 rounded-lg">In corso</span>`
+                        : ``);
+
+                const cardClass = [
+                    "p-4 bg-white border rounded-2xl transition-all",
+                    isCurrent ? "border-indigo-400 shadow-md ring-2 ring-indigo-200" : "border-slate-200 hover:border-indigo-400 hover:shadow-md",
+                    isDone ? "opacity-95" : ""
+                ].join(" ");
+
+                return `
+                    <div class="${cardClass}">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex items-start gap-3">
+                                <div class="w-10 h-10 bg-indigo-100 text-indigo-700 rounded-xl flex items-center justify-center border border-indigo-100 shrink-0">
+                                    <i class="fas ${ch.icon}"></i>
+                                </div>
+                                <div>
+                                    <div class="font-black text-slate-900 flex items-center gap-2">${range} · ${ch.title} ${badge}</div>
+                                    <div class="text-sm text-slate-600">${ch.summary}</div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="tooltip">
+                                    <button type="button" class="tooltip-btn" aria-label="Info">i</button>
+                                    <span class="tooltip-content" role="tooltip">${ch.bubble}</span>
+                                </span>
+                                <button type="button" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm shadow-sm" onclick="playChapter('${ch.id}')">Vai</button>
+                            </div>
+                        </div>
+                        <div class="mt-3 text-xs text-slate-600">
+                            <span class="font-black text-slate-700">Stop & pensa:</span> ${ch.prompt}
+                        </div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function setStatus(text) {
+            const el = document.getElementById("statusLine");
+            if (!el) return;
+            el.textContent = text || "";
+        }
+
+        function setChapterPrompt(text) {
+            const el = document.getElementById("chapterPrompt");
+            if (!el) return;
+            el.textContent = text || "";
+            if (el.animate) {
+                el.animate([{ opacity: 0.5 }, { opacity: 1 }], { duration: 250, easing: "ease-out" });
+            }
+        }
+
+        function playChapter(id) {
+            const ch = chapters.find(c => c.id === id);
+            if (!ch) return;
+
+            setChapterPrompt(ch.prompt);
+            setCurrentChapter(ch);
+            renderChapters();
+
+            if (!player || !player.seekTo) {
+                setStatus("Player non pronto: attendi 2 secondi e riprova (oppure ricarica la pagina).");
+                return;
+            }
+
+            setStatus("");
+            seekVideo(ch.start, ch.end);
+        }
+
+        function startGuided() {
+            if (!chapters.length) return;
+            const next = chapters.find(ch => !isChapterComplete(ch)) || chapters[0];
+            playChapter(next.id);
+        }
+
+        function pauseNow() {
+            if (!currentChapter) {
+                setStatus("Seleziona una tappa e clicca “Vai”, poi usa “Pausa + domande”.");
+                return;
+            }
+            if (player && player.pauseVideo) player.pauseVideo();
+            pauseMode = "manual";
+            clearVideoBubble();
+            showPausePanelForChapter(currentChapter);
+            setStatus("Pausa manuale: rispondi alle domande, poi riprendi la tappa.");
+        }
+
+        function playNextChapter() {
+            if (!chapters.length) return;
+
+            if (!currentChapter) {
+                startGuided();
+                return;
+            }
+
+            const idx = chapters.findIndex(c => c.id === currentChapter.id);
+            const next = idx >= 0 ? chapters[idx + 1] : null;
+
+            if (!next) {
+                hidePausePanel();
+                setStatus("Percorso completato. Ora puoi fare il quiz (a destra) o riascoltare una tappa.");
+                return;
+            }
+
+            playChapter(next.id);
+        }
+
+        function updatePausePanelState(ch) {
+            const progressEl = document.getElementById("pauseProgress");
+            const primaryBtn = document.getElementById("pausePrimaryBtn");
+            if (!progressEl || !primaryBtn || !ch) return;
+
+            const qs = normalizeQuestions(ch).filter(q => q.required !== false);
+            const total = qs.length;
+            const done = qs.reduce((n, q) => {
+                const res = validateAnswer(ch, q, getAnswer(ch.id, q.id));
+                return n + (res.complete ? 1 : 0);
+            }, 0);
+
+            if (!total) {
+                progressEl.textContent = "—";
+            } else if (done >= total) {
+                progressEl.textContent = `Risposte: ${done}/${total} complete — puoi continuare.`;
+            } else {
+                progressEl.textContent = `Risposte: ${done}/${total} complete — completa per continuare.`;
+            }
+
+            if (pauseMode === "manual") {
+                primaryBtn.textContent = "Riprendi tappa";
+                primaryBtn.disabled = false;
+                return;
+            }
+
+            primaryBtn.textContent = "Tappa successiva";
+            primaryBtn.disabled = total ? (done < total) : false;
+        }
+
+        function pausePrimaryAction() {
+            if (!currentChapter) return;
+
+            if (pauseMode === "manual") {
+                hidePausePanel();
+                setStatus("");
+                if (player && player.playVideo) player.playVideo();
+                return;
+            }
+
+            if (!isChapterComplete(currentChapter)) {
+                setStatus("Completa le risposte per continuare.");
+                updatePausePanelState(currentChapter);
+                return;
+            }
+
+            hidePausePanel();
+            setStatus("");
+            playNextChapter();
+        }
+
+        function setCurrentChapter(ch) {
+            currentChapter = ch || null;
+            hidePausePanel();
+            clearVideoBubble();
+            renderVideoNotesForChapter(currentChapter);
+
+            const items = Array.isArray(ch?.videoBubbles) ? ch.videoBubbles.slice() : [];
+            items.sort((a, b) => (Number(a.at) || 0) - (Number(b.at) || 0));
+            videoBubbleItems = items;
+            videoBubbleShown = new Array(items.length).fill(false);
+            videoBubbleVisibleIndex = null;
+        }
+
+        function seekVideo(startSeconds, endSeconds) {
+            if (!player || !player.seekTo) return;
+
+            const start = Math.max(0, Number(startSeconds) || 0);
+            const end = endSeconds == null ? null : Math.max(0, Number(endSeconds) || 0);
+
+            if (chapterStopTimer) {
+                clearInterval(chapterStopTimer);
+                chapterStopTimer = null;
+            }
+
+            player.seekTo(start, true);
+            player.playVideo();
+
+            const iframe = document.getElementById("video-player");
+            if (iframe) {
+                const shouldScroll = (window.matchMedia ? window.matchMedia("(max-width: 1023px)").matches : true);
+                if (shouldScroll) iframe.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+
+            if (end != null && end > start) {
+                chapterStopTimer = setInterval(() => {
+                    if (!player || !player.getCurrentTime) return;
+                    const t = player.getCurrentTime();
+                    maybeShowVideoBubbleAtTime(t);
+                    if (t >= (end - 0.15)) {
+                        player.pauseVideo();
+                        clearInterval(chapterStopTimer);
+                        chapterStopTimer = null;
+                        renderChapters();
+                        pauseMode = "end";
+                        setStatus("Segmento terminato: rispondi alle domande per sbloccare la tappa successiva.");
+                        clearVideoBubble();
+                        showPausePanelForChapter(currentChapter);
+                    }
+                }, 250);
+            }
+        }
+
+        function maybeShowVideoBubbleAtTime(currentTimeSeconds) {
+            // Commenti nella video: ora sono "a richiesta". (Modalita' automatica disattivata)
+            return;
+        }
+
+        function showVideoBubble(text) {
+            const el = document.getElementById("videoBubble");
+            const tx = document.getElementById("videoBubbleText");
+            if (!el || !tx) return;
+            tx.textContent = String(text || "");
+            el.classList.remove("hidden");
+            el.style.animation = "fadeIn 0.25s ease-out";
+        }
+
+        function clearVideoBubble() {
+            const el = document.getElementById("videoBubble");
+            const tx = document.getElementById("videoBubbleText");
+            if (tx) tx.textContent = "";
+            if (el) el.classList.add("hidden");
+        }
+
+        function showPausePanelForChapter(ch) {
+            const panel = document.getElementById("pausePanel");
+            const title = document.getElementById("pauseTitle");
+            const time = document.getElementById("pauseTime");
+            const primaryBtn = document.getElementById("pausePrimaryBtn");
+            const transcriptWrap = document.getElementById("pauseTranscriptWrap");
+            const transcriptEl = document.getElementById("pauseTranscript");
+            const questions = document.getElementById("pauseQuestions");
+            const supports = document.getElementById("pauseSupports");
+
+            if (!panel || !title || !time || !primaryBtn || !transcriptWrap || !transcriptEl || !questions || !supports) return;
+            if (!ch) return;
+
+            title.textContent = ch.title || "Pausa";
+            time.textContent = (ch.start != null && ch.end != null)
+                ? `Da ${formatTime(ch.start)} a ${formatTime(ch.end)}`
+                : "—";
+
+            // Transcript (optional)
+            const tr = ch?.pause?.transcript;
+            if (tr) {
+                transcriptWrap.classList.remove("hidden");
+                transcriptEl.textContent = String(tr);
+            } else {
+                transcriptWrap.classList.add("hidden");
+                transcriptEl.textContent = "";
+            }
+
+            // Questions
+            const qs = normalizeQuestions(ch);
+            questions.innerHTML = "";
+            qs.forEach((q, idx) => {
+                const block = document.createElement("div");
+                block.className = "p-4 bg-slate-50 border border-slate-200 rounded-2xl";
+
+                const top = document.createElement("div");
+                top.className = "flex items-start justify-between gap-3";
+
+                const qText = document.createElement("div");
+                qText.className = "text-sm font-black text-slate-800 leading-snug";
+                qText.textContent = String(q.text || "");
+
+                const badge = document.createElement("span");
+                badge.className = "shrink-0 text-[10px] font-black px-2 py-1 rounded-lg border";
+                badge.textContent = "Da fare";
+                badge.style.backgroundColor = "#ffffff";
+                badge.style.borderColor = "#e2e8f0";
+                badge.style.color = "#64748b";
+
+                top.appendChild(qText);
+                top.appendChild(badge);
+
+                const textarea = document.createElement("textarea");
+                textarea.className = "mt-3 w-full bg-white border border-slate-200 rounded-2xl p-3 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400";
+                textarea.rows = 3;
+                textarea.placeholder = q.placeholder || "Scrivi qui…";
+                textarea.value = getAnswer(ch.id, q.id);
+                textarea.setAttribute("data-chapter", ch.id);
+                textarea.setAttribute("data-question", q.id);
+                textarea.setAttribute("aria-label", `Risposta ${idx + 1}`);
+
+                const feedback = document.createElement("div");
+                feedback.className = "mt-2 text-xs";
+
+                const applyValidation = () => {
+                    const res = validateAnswer(ch, q, textarea.value);
+                    if (!res.complete) {
+                        badge.textContent = "Da fare";
+                        badge.style.backgroundColor = "#ffffff";
+                        badge.style.borderColor = "#e2e8f0";
+                        badge.style.color = "#64748b";
+                        feedback.style.color = "#7a4a00";
+                        feedback.textContent = res.message || "";
+                        return;
+                    }
+
+                    badge.textContent = "OK";
+                    if (res.hint) {
+                        badge.style.backgroundColor = "#fef7e0";
+                        badge.style.borderColor = "#fde293";
+                        badge.style.color = "#7a4a00";
+                        feedback.style.color = "#334155";
+                        feedback.textContent = res.message || "";
+                        return;
+                    }
+
+                    badge.style.backgroundColor = "#e6f4ea";
+                    badge.style.borderColor = "#ceead6";
+                    badge.style.color = "#0d652d";
+                    feedback.textContent = "";
+                };
+
+                textarea.addEventListener("input", () => {
+                    setAnswer(ch.id, q.id, textarea.value);
+                    applyValidation();
+                    updatePausePanelState(ch);
+                    renderChapters();
+                });
+
+                applyValidation();
+
+                block.appendChild(top);
+                block.appendChild(textarea);
+                block.appendChild(feedback);
+                questions.appendChild(block);
+            });
+
+            // Supports (optional)
+            supports.innerHTML = "";
+            const ss = Array.isArray(ch?.pause?.supports) ? ch.pause.supports : [];
+            ss.forEach(s => {
+                const details = document.createElement("details");
+                details.className = "group p-4 bg-white border border-slate-200 rounded-2xl";
+
+                const summary = document.createElement("summary");
+                summary.className = "cursor-pointer font-black text-slate-800";
+                summary.textContent = String(s?.title || "Aiuto");
+
+                const body = document.createElement("div");
+                body.className = "mt-2 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed";
+                body.textContent = String(s?.body || "");
+
+                details.appendChild(summary);
+                details.appendChild(body);
+                supports.appendChild(details);
+            });
+
+            // Supporto "sempre disponibile" (anche quando non c'e' una trascrizione specifica).
+            const always = document.createElement("details");
+            always.className = "group p-4 bg-slate-50 border border-slate-200 rounded-2xl";
+            const alwaysSum = document.createElement("summary");
+            alwaysSum.className = "cursor-pointer font-black text-slate-800";
+            alwaysSum.textContent = "Aiuto (sempre) — Metodo rapido";
+            const alwaysBody = document.createElement("div");
+            alwaysBody.className = "mt-2 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed";
+            alwaysBody.textContent =
+`1) Riascolta la tappa una volta.
+2) Scrivi 3 parole chiave.
+3) Rispondi con una frase: “In questo pezzo si dice che…”.
+
+Se ti manca una parola: usa il glossario qui sotto (Lessico fondamentale).`;
+            always.appendChild(alwaysSum);
+            always.appendChild(alwaysBody);
+            supports.appendChild(always);
+
+            // Aggiorna bottone + progress (dipende dal tipo di pausa).
+            updatePausePanelState(ch);
+
+            panel.classList.remove("hidden");
+            panel.scrollIntoView({ behavior: "smooth", block: "start" });
+
+            // Ergonomia: porta subito il focus sulla prima risposta.
+            setTimeout(() => {
+                const first = questions.querySelector("textarea");
+                if (!first) return;
+                try { first.focus({ preventScroll: true }); } catch (_) { first.focus(); }
+            }, 0);
+        }
+
+        function hidePausePanel() {
+            const panel = document.getElementById("pausePanel");
+            if (panel) panel.classList.add("hidden");
+        }
+
+        function replayCurrentChapter() {
+            if (!currentChapter) return;
+            hidePausePanel();
+            setStatus("");
+            // Reset bubbles + pause state for a clean replay.
+            const ch = currentChapter;
+            setCurrentChapter(ch);
+            seekVideo(ch.start, ch.end);
+        }
+
+        // YouTube Iframe API
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player("video-player", { events: { onReady: onPlayerReady } });
+        }
+
+        function onPlayerReady() {
+            setStatus("Player pronto. Suggerimento: clicca una tappa e rispondi alla pausa guidata.");
+        }
+
+        function loadYouTubeApi() {
+            if (window.YT && window.YT.Player) return;
+            const tag = document.createElement("script");
+            tag.src = "https://www.youtube.com/iframe_api";
+            document.head.appendChild(tag);
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            // Aggiunge origin al player (aiuta l'API su alcuni browser).
+            const iframe = document.getElementById("video-player");
+            if (iframe && iframe.src) {
+                try {
+                    const url = new URL(iframe.src);
+                    if (!url.searchParams.get("origin")) {
+                        url.searchParams.set("origin", window.location.origin);
+                        iframe.src = url.toString();
+                    }
+                } catch (_) {}
+            }
+
+            setStatus("Caricamento del player…");
+            updateVideoNotesLangButtons();
+            renderVideoNotesForChapter(null);
+            renderChapters();
+            loadYouTubeApi();
+        });
+
+        /* -------------------------------
+           3) Quiz comprensione
+        --------------------------------- */
+        const quizData = [
+            {
+                q: "Quale muro ha abbattuto Alfonsina Strada nel 1924?",
+                options: ["Il divieto per le donne di nuotare", "L'accesso delle donne alle gare di ciclismo", "La partecipazione femminile allo sci"],
+                correct: 1,
+                feedback: "Esatto! Alfonsina Strada è stata la pioniera del ciclismo femminile partecipando al Giro d'Italia."
+            },
+            {
+                q: "Cosa dice la legge del 1981 sulle atlete in TV?",
+                options: ["Che sono professioniste", "Che restano dilettanti senza tutele", "Che devono gareggiare solo con uomini"],
+                correct: 1,
+                feedback: "Corretto. Per molto tempo le donne sono state considerate solo dilettanti, nonostante i successi."
+            },
+            {
+                q: "Cosa ha permesso di ottenere una 'vittoria epocale' recentemente?",
+                options: ["Un fondo per la maternità", "Più ore di allenamento", "Nuove divise sportive"],
+                correct: 0,
+                feedback: "Esatto! Il riconoscimento di un fondo per la maternità è un passo storico verso la parità."
+            },
+            {
+                q: "Secondo la conclusione del video, quali sono gli unici limiti “insuperabili”?",
+                options: ["Quelli fisici del corpo", "Quelli che abbiamo dentro di noi", "Quelli imposti dagli arbitri"],
+                correct: 1,
+                feedback: "Esatto: il video dice che i limiti più difficili da superare sono spesso quelli interiori (paure, convinzioni)."
+            }
+        ];
+
+        function startQuiz() {
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            const area = document.getElementById('quizArea');
+            if (!area) return;
+
+            if (currentQuizIndex >= quizData.length) {
+                area.innerHTML = `
+                    <div class="text-center p-6 bg-emerald-50 rounded-2xl border border-emerald-100">
+                        <i class="fas fa-check-double text-emerald-500 text-3xl mb-3"></i>
+                        <p class="font-black text-emerald-900">Eccellente! Percorso completato.</p>
+                        <p class="text-xs text-emerald-700 mt-1">Hai dimostrato un'ottima comprensione.</p>
+                    </div>`;
+                return;
+            }
+
+            const data = quizData[currentQuizIndex];
+            let html = `<div class="p-1"><p class="text-sm font-bold text-slate-800 mb-4">${data.q}</p>`;
+            data.options.forEach((opt, i) => {
+                html += `<button onclick="checkAnswer(${i})" class="w-full mb-3 p-4 text-left border border-slate-200 rounded-2xl hover:bg-white hover:border-indigo-400 hover:shadow-md transition-all text-sm group flex items-center justify-between">
+                            <span>${opt}</span>
+                            <i class="fas fa-chevron-right text-slate-300 group-hover:text-indigo-500 transition-colors"></i>
+                         </button>`;
+            });
+            html += `</div>`;
+            area.innerHTML = html;
+        }
+
+        function checkAnswer(index) {
+            const data = quizData[currentQuizIndex];
+            if (index === data.correct) {
+                score += 20;
+                showModal(true, data.feedback);
+                currentQuizIndex++;
+            } else {
+                showModal(false, "Non è la risposta corretta. Riguarda il passaggio del video sulla storia o sulla legge del 1981!");
+            }
+            const scoreEl = document.getElementById('scoreDisplay');
+            if (scoreEl) scoreEl.textContent = score;
+        }
+
+        function showModal(success, text) {
+            const m = document.getElementById('modal');
+            const icon = document.getElementById('modalIcon');
+            const title = document.getElementById('modalTitle');
+            const desc = document.getElementById('modalText');
+
+            if (!m || !icon || !title || !desc) return;
+
+            m.classList.remove('hidden');
+            if (success) {
+                icon.innerHTML = '🎉';
+                title.textContent = "Ottimo lavoro!";
+                title.className = "text-2xl font-black mb-3 text-emerald-600";
+            } else {
+                icon.innerHTML = '🧐';
+                title.textContent = "Quasi...";
+                title.className = "text-2xl font-black mb-3 text-amber-600";
+            }
+            desc.textContent = text;
+        }
+
+        function closeModal() {
+            const m = document.getElementById('modal');
+            if (m) m.classList.add('hidden');
+            renderQuestion();
+        }
+    </script>
+</body>
+</html>
